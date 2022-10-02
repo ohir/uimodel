@@ -1,12 +1,15 @@
 <!-- Copyright (c) 2022 Wojciech S. Czarnecki, aka Ohir Ripe -->
 
-## UiModel, UiModelLink
+## UiModel, UiModelLink, Toggler
 
-Package `uimodel` provides two mixins: [UiModel] for your _Models_, and [UiModelLink] for your _Widgets_.
+Package `uimodel` provides two mixins: [UiModel] for your _Models_, and [UiModelLink] for your _Widgets_ bringing to your Flutter App the [Toggler](https://github.com/ohir/toggler) as state managnment engine. Both packages are extremally fast and lean, Toggler having some 160 loc and zero dependencies, and Uimodel around 130 loc, depending only
+on Toggler and flutter/widgets.
 
-Together these allow a _StatelessWidget with UiModelLink_ to observe changes in _Model with UiModel_, and rebuild accordingly. [UiModel] is a thin wrapper around an internal [Toggler]. The [UiNotifier] and [UiModelLink] connect
+[UiModel] mixin is a thin wrapper around an internal [Toggler](https://github.com/ohir/toggler) exposing a subset of its api useful in Widget `build` method.
 
-All by a single `watches` line added to the `build` method:
+[UiModelLink] mixin adds the magic _watches(model, changes-mask)_ to the Widget.
+
+Together these allow a _StatelessWidget with UiModelLink_ to observe changes in _Model with UiModel_, and rebuild accordingly. All by a single `watches` invocation in the Widget's  `build`:
 ```Dart
 // in mymodels.dart:
 class ViewModel with UiModel {...} // below seen as 'm' singleton
