@@ -31,7 +31,8 @@ _Example App with state management based on [Toggler] then linked to Flutter Vie
 ## Code:
 ```Dart
 import 'package:flutter/material.dart';
-import 'package:uimodel/uimodel.dart';
+import 'package:uimodel/uimodel.dart'; // UiModel, UiModelLink
+import 'package:toggler/toggler.dart'; // for DebugInfoBar UI and our Model
 
 final m = ViewModel(); // "ambient" singleton instance
 
@@ -72,16 +73,14 @@ class CounterView extends StatelessWidget {
     ]);
   }
 }
-
-/// we wire up Views to the ViewModel or Model by constant index numbers (prefixed
-/// _tg_) and their respective masks (prefixed _sm_). Mask bits are useful to
-/// have Widget's observing more than one changed property of ViewModel. Keep
-/// index and mask name definitions close, as seen below. You may generate all
-/// index/mask pairs using script that comes with _Toggler_ package.
-const tgUp = 10; // tgIndex
+```
+View with its ViewModel is wired with constant Toggler index (prefixed _tg_) and masks (prefixed _sm_). Masks allows to at once observe more than one possible change in a ViewModel.
+_You may generate index/mask pairs using script that comes with [Toggler](https://github.com/ohir/toggler) package._
+```Dart
+const tgUp = 10; // tgIndex (of tgUp change signal)
 const smUp = 1 << tgUp; // smMask (of above tgIndex)
 const tgDn = 11;
-const smDn = 1 << tgDn; // ...more definitions at bottom of this file
+const smDn = 1 << tgDn; // ...more definitions ommited
 
 /// link Counter to UiModel (here explicitly via UiModelLink mixin. (In Widgets
 /// below we will use `extends UiModeledWidget` shim, it means the same).
@@ -91,7 +90,7 @@ class Counter extends StatelessWidget with UiModelLink {
   }) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    watches(m, smDn | smUp | smInfo); // three flags in 'm' observed
+    watches(m, smDn | smUp | smInfo); // three flags/signals in 'm' observed
     // watches(m.submodel, smSubSmth | smSubOther); // here: two of submodel
     return Expanded(
         child: Center(
