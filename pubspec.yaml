@@ -1,0 +1,24 @@
+name: uimodel
+description: UiModel mixin based on Toggler mechanics for MVVM App architecture. UiModelLink mixin binds UiModel based ViewModels to the StatelessWidget in a single line.
+version: 0.1.0
+publish_to: none
+homepage: https://github.com/ohir/uimodel
+repository: https://github.com/ohir/uimodel
+
+environment:
+  sdk: '>=2.18.1 <3.0.0'
+  flutter: ">=1.17.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  toggler:
+    path: ../toggler
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
