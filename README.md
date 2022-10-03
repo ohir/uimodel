@@ -1,15 +1,16 @@
 <!-- Copyright (c) 2022 Wojciech S. Czarnecki, aka Ohir Ripe -->
 
-## UiModel, UiModelLink, Toggler
+## UiModel, a lean and clean state managnment for Flutter Apps.
 
-Package `uimodel` provides two mixins: [UiModel] for your _Models_, and [UiModelLink] for your _Widgets_ bringing to your Flutter App the [Toggler](https://github.com/ohir/toggler) as state managnment engine. Both packages are extremally fast and lean, Toggler having some 160 loc and zero dependencies, and Uimodel around 130 loc, depending only
-on Toggler and flutter/widgets.
+Package `uimodel` helps to build comprehensible Models and ViewModels for Flutter apps, then have it linked with UI in a single line per your custom Widget.
 
-[UiModel] mixin is a thin wrapper around an internal [Toggler](https://github.com/ohir/toggler) exposing a subset of its api useful in Widget `build` method.
+[UiModel] mixin is a thin wrapper around [Toggler](https://github.com/ohir/toggler), an (observable) state machine register that runs underhood your Models. It exposes a subset of Toggler api useful in Widget `build` method.
 
-[UiModelLink] mixin adds the magic _watches(model, changes-mask)_ to the Widget.
+[UiModelLink] mixin adds the magic _watches(model, changes-mask)_ link layer to the Widget.
 
-Together these allow a _StatelessWidget with UiModelLink_ to observe changes in _Model with UiModel_, and rebuild accordingly. All by a single `watches` invocation in the Widget's  `build`:
+[UiNotifier] is a concrete implementation of a _ToggledNotifier_ that talks directly to Flutter [Element]s of your UI Widgets.
+
+Together these allow a "_StatelessWidget with UiModelLink_" to observe changes in "_Model with UiModel_", and rebuild accordingly. All by a single `watches` invocation in the Widget's `build`:
 ```Dart
 // in mymodels.dart:
 class ViewModel with UiModel {...} // below seen as 'm' singleton
@@ -20,18 +21,18 @@ class MyWidget extends StatelessWidget with UiModelLink {
   @override
   Widget build(BuildContext context) {
     watches(m, smDn | smUp | smEnd ); // three flags/events in 'm' observed
-    // watches(m.viewmodel, smPos | smAlt | smEnd ); // or two in m.submodel
+    // watches(m.viewmodel, smPos | smAlt | smEnd ); // or in m.submodel
 ```
-_Example App with state management based on [Toggler] then linked to Flutter View with [UiModelLink] can be found in the [example/main.dart] file.  Both UI and Model code is also given at bottom of this README_.
+_Example App with state management based on [Toggler](https://github.com/ohir/toggler) then linked to Flutter View with [UiModelLink] can be found in the [example/main.dart](file:///example/main.dart) file.  Both UI and Model code is also given at bottom of this README_.
 
 ## Toggler based ViewModels, a HOWTO
 
 - [ ] TODO
 
 ## Example App:
-![example app main page](example/tgapp.gif)
+![example app main page](file:///example/tgapp.gif)
 
-## Code:
+## UI code:
 ```Dart
 import 'package:flutter/material.dart';
 import 'package:uimodel/uimodel.dart'; // UiModel, UiModelLink
@@ -77,13 +78,12 @@ class CounterView extends StatelessWidget {
   }
 }
 ```
-View with its ViewModel is wired with constant Toggler index (prefixed _tg_) and masks (prefixed _sm_). Masks allows to at once observe more than one possible change in a ViewModel.
-_You may generate index/mask pairs using script that comes with [Toggler](https://github.com/ohir/toggler) package._
+View is wired to its ViewModel notifier with masks (prefixed _sm_) of a Toggler index (prefixed _tg_). Both are const int numbers. Indice are used to read and set flags state, masks are used to select more than one flag to observe. _You may generate index/mask pairs using script that comes with [Toggler](https://github.com/ohir/toggler/blob/main/tool/print_named_indice.dart) package._
 ```Dart
 const tgUp = 10; // tgIndex (of tgUp change signal)
 const smUp = 1 << tgUp; // smMask (of above tgIndex)
 const tgDn = 11;
-const smDn = 1 << tgDn; // ...more definitions ommited
+const smDn = 1 << tgDn; // ...more definitions ommited here
 
 /// link Counter to UiModel (here explicitly via UiModelLink mixin. (In Widgets
 /// below we will use `extends UiModeledWidget` shim, it means the same).
@@ -192,15 +192,12 @@ class OperatorBar extends StatelessWidget {
       IconButton(onPressed: m.max, icon: const Icon(Icons.last_page)),
     ]);
   }
-}
+} // end of App UI
+```
+### Model code:
 
-//////////////////////////////////////////////////////////
-// App View is above, Model is below
-
-/// for simple Apps we may use a model of the _App_ as a whole, and have our UI
-/// (or test infrastructure) wired via the notification dispatcher only.
-/// State transition tests are faster and simpler if done with pure Dart.
-/// This example of ViewModel here is our whole App Model.
+Example _ViewModel_ below is our whole App Model, with some bits being (Model) signals, and some being (ViewModel) state that affects Widget final look:
+```Dart
 class ViewModel with UiModel {
   int _ct = 0;
   int _sk = 0;
@@ -350,3 +347,11 @@ String b(int n) {
   return zs.substring(0, zs.length - nb.length) + nb;
 }
 -->
+
+## FAQ
+
+- Q. How much ballast this adds to my App?
+  A. Both [uimodel] and [toggler](https://github.com/ohir/toggler) packages are lean, Toggler having some 160 loc and zero dependencies, and Uimodel around 130 loc, depending only on Toggler and flutter/widgets Element. Toggler instance adds 64 bytes to the [Object] (then to your Model via [UiModel] mixin). [UiNotifier] costs a single dart:core Map then adds a dart:core List<VoidCallback> per every mask watched. Ie. you may count less than 32 bytes per each on-screen Widget that watches Model.
+
+- Q. It looks too good to be true. Where is the trap?
+  A. You must understand you work with indice and bitmasks. These are named for reading humans but compiler sees only numbers. Analyzer will not tell you "hey, its a wrong type here". Please read about [caveats](https://github.com/ohir/toggler#the-price-tag) in [Toggler](https://github.com/ohir/toggler) documentation. Then adhere to proposed naming convention.
