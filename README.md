@@ -30,7 +30,7 @@ _Example App with state management based on [Toggler](https://github.com/ohir/to
 - [ ] TODO
 
 ## Example App:
-![example app main page](file:///example/tgapp.gif)
+![example app main page](example/tgapp.gif)
 
 ## UI code:
 ```Dart
