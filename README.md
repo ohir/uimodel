@@ -351,7 +351,7 @@ String b(int n) {
 ## FAQ
 
 - Q. How much ballast this adds to my App?
-  A. Both [uimodel] and [toggler](https://github.com/ohir/toggler) packages are lean, Toggler having some 160 loc and zero dependencies, and Uimodel around 130 loc, depending only on Toggler and flutter/widgets Element. Toggler instance adds 64 bytes to the [Object] (then to your Model via [UiModel] mixin). [UiNotifier] costs a single dart:core Map then adds a dart:core List<VoidCallback> per every mask watched. Ie. you may count less than 32 bytes per each on-screen Widget that watches Model.
+- A. Both [uimodel] and [toggler](https://github.com/ohir/toggler) packages are lean, Toggler having some 160 loc and zero dependencies, and Uimodel around 130 loc, depending only on Toggler and flutter/widgets Element. Toggler instance adds 64 bytes to the [Object] (then to your Model via [UiModel] mixin). [UiNotifier] costs a single dart:core Map then adds a dart:core List<VoidCallback> per every mask watched. Ie. you may count less than 32 bytes per each on-screen Widget that watches Model.
 
 - Q. It looks too good to be true. Where is the trap?
-  A. You must understand you work with indice and bitmasks. These are named for reading humans but compiler sees only numbers. Analyzer will not tell you "hey, its a wrong type here". Please read about [caveats](https://github.com/ohir/toggler#the-price-tag) in [Toggler](https://github.com/ohir/toggler) documentation. Then adhere to proposed naming convention.
+- A. You must understand you work with indice and bitmasks. These are named for reading humans but compiler sees only numbers. Analyzer will not tell you "hey, its a wrong type here". Please read about [caveats](https://github.com/ohir/toggler#the-price-tag) in [Toggler](https://github.com/ohir/toggler) documentation. Then adhere to proposed naming convention.

@@ -55,7 +55,7 @@ mixin UiModel {
   ///
   /// Not fastest in the pack, but allows for consistent use of `[tgIndex]` in
   /// the UI code.  If you must have it faster, use _tg_ directly, eg.
-  /// `m.tg.active(tgIndex)`, `m.tg.enable(tgIndex)`.
+  /// `m.tg.active(tgIndex)`, `m.tg.enable(tgIndex)`, `m.tg.disable(tgIndex)`.
   TgIndexed<bool> get E => tg.E;
 }
 
@@ -121,17 +121,21 @@ class UiNotifier extends ToggledNotifier {
       _wama[smMask] = <Element>[whom];
       return;
     }
-    assert(!el.contains(whom),
-        'Bad! Element to notify tried to register again for the same mask!');
+    // guarded in UiModelLink now
+    // assert(!el.contains(whom), 'Bad! Element to notify tried to register again for the same mask!');
     el.add(whom);
   }
 
   void _removeElement(Element whom, int smMask) {
     final el = _wama[smMask];
+// coverage:ignore-start
+// XXX tests need a navigator, likely. We either must forego dispose on notifier,
+// or must keep this assertion, for one who uses dispose after catching exception
+//
     assert(el != null,
         'remove Element of not registered mask:$smMask for element:$whom');
+// coverage:ignore-end
     if (el == null) return;
-    assert(el.contains(whom), 'remove Element of not registered element:$whom');
     el.remove(whom);
     if (el.isEmpty) _wama.remove(smMask);
   }
@@ -147,14 +151,15 @@ class _MixinState {
   }
 
   void bindNotifier(UiNotifier uin, int smMask) {
+    if (smMask == _smmask && _uin == uin) return; // We're "rewatching".
     if (_smmask == null) {
       _uin = uin;
       _smmask = smMask;
       _uin?._addElement(_element!, smMask);
     } else {
-      if (smMask == _smmask && _uin == uin) return; // We're "rewatching".
       _uin == uin ? _uin?._removeElement(_element!, _smmask!) : _uin = uin;
       _uin?._addElement(_element!, smMask);
+      _smmask = smMask;
     }
   }
 
