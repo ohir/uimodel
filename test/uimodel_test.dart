@@ -3,6 +3,30 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:uimodel/uimodel.dart';
 
+/// our model to tests
+class TestModel with UiModel {
+  final sub1 = SubModel();
+  final sub2 = SubModel(100);
+  late final TgIndexed<void> tap;
+  final _bs = <BuiltState>[
+    // up to 6 our test widgets reflect back their state here
+    BuiltState(),
+    BuiltState(),
+    BuiltState(),
+    BuiltState(),
+    BuiltState(),
+    BuiltState(),
+  ];
+  TestModel() {
+    tap = TgIndexed(((i) {
+      _bs[i].taps++;
+      tg.toggle(i);
+    }), ((i, v) {}));
+    tg.notifier = UiNotifier();
+  }
+  List<BuiltState> get bs => _bs;
+}
+
 /// inherited bool
 class OneOrAnother extends InheritedWidget {
   final bool value;
@@ -17,6 +41,7 @@ class OneOrAnother extends InheritedWidget {
   bool updateShouldNotify(OneOrAnother old) => value != old.value;
 }
 
+/// trying to get to update
 class DoubleW extends UiModeledWidget {
   final TestModel m;
   final Widget w1;
@@ -55,6 +80,8 @@ class BuildsWatcher extends StatelessWidget with UiModelLink {
   Widget build(BuildContext context) {
     // watch also tgLastFlag if disabled, testing dynamic masks (not advised to use)
     m.E[pos] ? watches(m, smMask) : watches(m, smMask | 1 << tgLastFlag);
+    watches(m.sub1, 1); // watch also two submodels
+    watches(m.sub2, 1);
     final bs = m.bs[pos];
     bs.bc++;
     bs.wasSet = m[pos];
@@ -77,28 +104,19 @@ class RegTwice extends UiModeledWidget {
 const tgLastFlag = 5;
 const smLastFlag = 1 << 5;
 
-class TestModel with UiModel {
-  late final TgIndexed<void> tap;
-  final _bs = <BuiltState>[
-    // up to 6 our test widgets reflect back their state here
-    BuiltState(),
-    BuiltState(),
-    BuiltState(),
-    BuiltState(),
-    BuiltState(),
-    BuiltState(),
-  ];
-  TestModel() {
-    tap = TgIndexed(((i) {
-      _bs[i].taps++;
-      tg.toggle(i);
-    }), ((i, v) {}));
+class SubModel with UiModel {
+  int cnt;
+  SubModel([this.cnt = 0]) {
     tg.notifier = UiNotifier();
   }
-  List<BuiltState> get bs => _bs;
+  void up() {
+    cnt++;
+    tg.toggle(0);
+  }
 }
 
 void main() {
+  /*
   group('simple ::', () {
     late TestModel m;
     late BuildsWatcher wtop;
@@ -253,6 +271,23 @@ void main() {
     });
 
     testWidgets('conditional watch', (wt) async {
+      await wt.pumpWidget(wtop);
+      await wt.pump();
+      m[5] = true;
+      await wt.pump();
+      expect(m[5], isTrue);
+    });
+  });
+  */
+  group('multi ::', () {
+    late TestModel m;
+    late Widget wtop;
+    setUp(() {
+      m = TestModel();
+      wtop = BuildsWatcher(m: m, pos: 2, smMask: 4);
+    });
+
+    testWidgets('watch', (wt) async {
       await wt.pumpWidget(wtop);
       await wt.pump();
       m[5] = true;

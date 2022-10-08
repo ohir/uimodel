@@ -135,14 +135,19 @@ class UiNotifier extends ToggledNotifier {
   }
 }
 
+class _ElementWatching {
+  int? _mask;
+  UiNotifier? _uin;
+  _ElementWatching(this._uin, this._mask);
+}
+
 class _MixinState {
   int? _smmask;
-  Element? _element;
   UiNotifier? _uin;
+  Element? _element;
+  List<_ElementWatching>? _more;
 
-  void init(Element element) {
-    _element = element;
-  }
+  void init(Element element) => _element = element;
 
 /* From the UI design it would be nice to have ability to bind widget to many
    (sub)models. Or change bindings on a next rebuild. This would be positive
@@ -151,25 +156,58 @@ class _MixinState {
    free to not think on presentation layer). But this might complicate code
    and leak.
    Other solution is to restrict user to a strict rule "single element,
-   single watches in build". We will do both (as branches and see).
+   single watches in build". We will do both experiments (as branches and see).
 */
   void bindNotifier(UiNotifier uin, int smMask) {
-    if (smMask == _smmask && _uin == uin) return; // We're "rewatching".
-    if (_smmask == null) {
-      _uin = uin;
-      _smmask = smMask;
-      _uin?._addElement(_element!, smMask);
-    } else {
-      _uin == uin ? _uin?._removeElement(_element!, _smmask!) : _uin = uin;
-      _uin?._addElement(_element!, smMask);
-      _smmask = smMask;
+    if (_more == null) {
+      if (smMask == _smmask && _uin == uin) {}
+      if (smMask == _smmask && _uin == uin) return; // rewatching
+      if (_smmask == null) {
+        _uin = uin;
+        _smmask = smMask;
+        _uin!._addElement(_element!, smMask);
+      } else if (uin != _uin) {
+        assert(_uin != null, 'Next watcher on a null_notifier');
+        _more = <_ElementWatching>[_ElementWatching(_uin, _smmask)];
+        uin._addElement(_element!, smMask);
+        _more!.add(_ElementWatching(uin, smMask));
+        _uin = null;
+        _smmask = null;
+      } else {
+        _uin!._removeElement(_element!, _smmask!); // watchmask changed
+        _uin!._addElement(_element!, smMask);
+        _smmask = smMask;
+      }
+      return;
     }
+    for (int n = _more!.length - 1; n >= 0; n--) {
+      final x = _more![n];
+      if (x._uin == uin && x._mask == smMask) return; // rewatching
+      if (x._uin == uin) {
+        x._uin!._removeElement(_element!, x._mask!); // watchmask changed
+        x._uin!._addElement(_element!, smMask);
+        _more![n]._mask = smMask;
+        return;
+      }
+    }
+    uin._addElement(_element!, smMask);
+    _more!.add(_ElementWatching(uin, smMask));
   }
 
   void dispose() {
-    _uin?._removeElement(_element!, _smmask!);
-    _element = null; // be nice to GC, GC will be nice to us
-    _uin = null;
+    if (_more == null) {
+      _uin?._removeElement(_element!, _smmask!);
+      _uin = null;
+    } else {
+      for (int n = _more!.length - 1; n >= 0; n--) {
+        final x = _more![n];
+        x._uin!._removeElement(_element!, x._mask!);
+        _more![n]._uin = null;
+      }
+      // _more!.clear();
+      _more = null;
+    }
+    _element = null;
   }
 }
 
