@@ -144,6 +144,15 @@ class _MixinState {
     _element = element;
   }
 
+/* From the UI design it would be nice to have ability to bind widget to many
+   (sub)models. Or change bindings on a next rebuild. This would be positive
+   for stronger decoupling View and Model (ie. designer being free to make a
+   screen piece from all data reachable via umbrella model, model developer
+   free to not think on presentation layer). But this might complicate code
+   and leak.
+   Other solution is to restrict user to a strict rule "single element,
+   single watches in build". We will do both (as branches and see).
+*/
   void bindNotifier(UiNotifier uin, int smMask) {
     if (smMask == _smmask && _uin == uin) return; // We're "rewatching".
     if (_smmask == null) {
