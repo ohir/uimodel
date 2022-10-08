@@ -74,7 +74,7 @@ class TgIndexed<T> {
   void operator []=(int i, T v) => sv(i, v);
 }
 
-/// add E getter to Toggler then expose it in [UiModel] for Views use
+/// add E getter to Toggler (just to expose it in [UiModel] for View code use)
 extension TogglerEindexed on Toggler {
   TgIndexed<bool> get E => TgIndexed((i) => active(i), (i, v) => setDS(i, !v));
 }

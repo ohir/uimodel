@@ -2,7 +2,7 @@
 
 ## UiModel, a lean and clean state managnment for Flutter Apps.
 
-Package `uimodel` helps to build comprehensible Models and ViewModels for Flutter apps, then have it linked with UI in a single line per your custom Widget.
+Package `uimodel` helps to build comprehensible Models and ViewModels for Flutter apps, then have it linked with UI View layer in a single line per your custom Widget.
 
 [UiModel] mixin is a thin wrapper around [Toggler](https://github.com/ohir/toggler), an (observable) state machine register that runs underhood your Models. It exposes a subset of Toggler api useful in Widget `build` method.
 
@@ -196,7 +196,7 @@ class OperatorBar extends StatelessWidget {
 ```
 ### Model code:
 
-Example _ViewModel_ below is our whole App Model, with some bits being (Model) signals, and some being (ViewModel) state that affects Widget final look:
+Example class below is our whole App Model, with some bits being (Model) signals, and some being (ViewModel) state that affects Widgets final look:
 ```Dart
 class ViewModel with UiModel {
   int _ct = 0;
@@ -232,13 +232,14 @@ class ViewModel with UiModel {
 
   // Do not use closures in UI event bindings. Model methods allows for
   // easy testing and can be later refactored to add functionality
-  // without even touching UI code.
+  // without even touching View layer code.
   void info() => tg.toggle(tgInfo);
   void cntry(int i) => tg.set1(i);
   void zero() => ct = 0;
   void max() => ct = counterMax;
   void sub() => ct--;
   void add() => ct++;
+  // end of ViewModel part
 
   /// Our "business logic": counter skips unlucky numbers as recognized
   /// in user set country, and also always skips multiplies of '15'.
@@ -282,8 +283,8 @@ class ViewModel with UiModel {
       }
     }
     return true;
-  }
-} // end of ViewModel
+  } // end of Model part
+}
 ```
 <!--
 /// tgName/smName constant indice and masks should be kept in a common file,
@@ -351,7 +352,8 @@ String b(int n) {
 ## FAQ
 
 - Q. How much ballast this adds to my App?
-- A. Both [uimodel] and [toggler](https://github.com/ohir/toggler) packages are lean, Toggler having some 160 loc and zero dependencies, and Uimodel around 130 loc, depending only on Toggler and flutter/widgets Element. Toggler instance adds 64 bytes to the [Object] (then to your Model via [UiModel] mixin). [UiNotifier] costs a single dart:core Map then adds a dart:core List<VoidCallback> per every mask watched. Ie. you may count less than 32 bytes per each on-screen Widget that watches Model.
+- A. Both [uimodel] and [toggler](https://github.com/ohir/toggler) packages are lean, Toggler having zero dependencies, and Uimodel depending only on Toggler and flutter/widgets Element. Toggler instance adds 64 bytes to the [Object] (then to your Model via [UiModel] mixin).
+[UiModelLink] mixin adds not much more to the Widget. The per Model [UiNotifier] object costs a dart:core Map then adds a dart:core List<VoidCallback> per every mask watched. Both [toggler] and [uimodel] libraries together add less than 255 loc to your executable.
 
-- Q. It looks too good to be true. Where is the trap?
+- Q. Looks too good to be true. Where is the trap?
 - A. You must understand you work with indice and bitmasks. These are named for reading humans but compiler sees only numbers. Analyzer will not tell you "hey, its a wrong type here". Please read about [caveats](https://github.com/ohir/toggler#the-price-tag) in [Toggler](https://github.com/ohir/toggler) documentation. Then adhere to proposed naming convention.
