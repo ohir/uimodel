@@ -3,6 +3,51 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:uimodel/uimodel.dart';
 
+class SimpleModel with UiModel {
+  int taps = 0;
+  SimpleModel() {
+    tg.notifier = UiNotifier();
+  }
+  void up() {
+    taps++;
+    tg.toggle(0);
+  }
+}
+
+class SimpleWatcher extends UiModeledWidget {
+  final SimpleModel m;
+  final int tag;
+  SimpleWatcher({super.key, required this.m, this.tag = 0});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container();
+  }
+}
+
+class Stw extends StatefulWidget {
+  Stw({super.key});
+  final SimpleModel m = SimpleModel();
+
+  @override
+  State<Stw> createState() => StwState();
+}
+
+class StwState extends State<Stw> {
+  int builds = 0;
+  @override
+  Widget build(BuildContext context) {
+    builds++;
+    final m = widget.m;
+    //return m[0] ? SimpleWatcher(m: m, tag: 1) : SimpleWatcher(m: m, tag: 2);
+    return m.taps & 1 == 0
+        ? SimpleWatcher(m: m, tag: 1)
+        : SimpleWatcher(m: m, tag: 2);
+  }
+
+  void tap0() => setState(() => widget.m.up());
+}
+
 /// our model to tests
 class TestModel with UiModel {
   final sub1 = SubModel();
@@ -279,6 +324,22 @@ void main() {
       m[5] = true;
       await wt.pump();
       expect(m[5], isTrue);
+    });
+  });
+  group('update ::', () {
+    setUp(() {
+      // m = SimpleModel();
+    });
+    testWidgets('Immerse', (wt) async {
+      final xx = Stw(key: const Key('stw'));
+      await wt.pumpWidget(xx);
+      expect(xx.m.taps, equals(0));
+      xx.m.up();
+      await wt.pump();
+      expect(xx.m.taps, equals(1));
+      xx.m.up();
+      await wt.pump();
+      expect(xx.m.taps, equals(2));
     });
   });
   group('multi ::', () {
