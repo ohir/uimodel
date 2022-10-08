@@ -116,7 +116,6 @@ class SubModel with UiModel {
 }
 
 void main() {
-  /*
   group('simple ::', () {
     late TestModel m;
     late BuildsWatcher wtop;
@@ -278,7 +277,6 @@ void main() {
       expect(m[5], isTrue);
     });
   });
-  */
   group('multi ::', () {
     late TestModel m;
     late Widget wtop;
