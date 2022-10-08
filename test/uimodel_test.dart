@@ -195,7 +195,7 @@ void main() {
       wtop = BuildsWatcher(m: m, pos: 0, smMask: 1);
     });
     test('model forwarders', () {
-      // make sure coverage-ignored frorwarders work
+      // make sure coverage-ignored forwarders work
       // https://github.com/flutter/flutter/issues/31856
       dynamic spare;
       spare = m[11];
@@ -226,6 +226,10 @@ void main() {
       await wt.pumpWidget(wtop);
       expect(m.bs[0].bc, equals(1)); // initial build should be counted
       int o = (m.tg.notifier as UiNotifier).observers;
+      expect(o, equals(1));
+      o = (m.sub1.tg.notifier as UiNotifier).observers;
+      expect(o, equals(1));
+      o = (m.sub2.tg.notifier as UiNotifier).observers;
       expect(o, equals(1));
     });
 
@@ -291,6 +295,22 @@ void main() {
       m[5] = true;
       await wt.pump();
       expect(m[5], isTrue);
+    });
+    testWidgets('submodels watched', (wt) async {
+      await wt.pumpWidget(wtop);
+      expect(m.bs[2].bc, equals(1)); // initial build should be counted
+      await wt.pump();
+      expect(m.bs[2].bc, equals(1)); // nothing to rebuild
+      expect(m.sub1.cnt, equals(0));
+      expect(m.sub2.cnt, equals(100));
+      m.sub1.up();
+      await wt.pump();
+      expect(m.bs[2].bc, equals(2)); // wtop watches sub1
+      expect(m.sub1.cnt, equals(1));
+      m.sub2.up();
+      await wt.pump();
+      expect(m.bs[2].bc, equals(3)); // wtop watches sub2
+      expect(m.sub2.cnt, equals(101));
     });
   });
   // group('newgroup', () { setUp(() {}); });

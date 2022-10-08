@@ -160,14 +160,12 @@ class _MixinState {
 */
   void bindNotifier(UiNotifier uin, int smMask) {
     if (_more == null) {
-      if (smMask == _smmask && _uin == uin) {}
       if (smMask == _smmask && _uin == uin) return; // rewatching
       if (_smmask == null) {
         _uin = uin;
         _smmask = smMask;
         _uin!._addElement(_element!, smMask);
       } else if (uin != _uin) {
-        assert(_uin != null, 'Next watcher on a null_notifier');
         _more = <_ElementWatching>[_ElementWatching(_uin, _smmask)];
         uin._addElement(_element!, smMask);
         _more!.add(_ElementWatching(uin, smMask));
@@ -222,8 +220,24 @@ mixin UiModelLink on StatelessWidget {
   @override
   StatelessElement createElement() => _StatelessUiElement(this);
 
-  /// observe flag changes in [UiModel] based _Model_. This is the only method
-  /// added by [UiModelLink].
+  /// observe flag changes in [UiModel] based _Model_. Or in any [UiModel] based
+  /// submodels of your umbrella _Model_. A Widget with [UiModelLink] may
+  /// observe more than one (sub)Model, one per each `watches` call; and it may
+  /// change watched masks in subsequent builds.
+  /// This is the only method added by [UiModelLink] mixin. It should be called
+  /// at the top of your StatelessWidget `build` method.
+  ///
+  /// Watching a single Model is cheap both cpu and memory-wise, watching
+  /// two or more internally makes a list of modelLinks then on each `build`
+  /// link-check mechanics must iterate over list to find whether `watches`
+  /// configuration had changed.
+  ///
+  /// While widget may not _"deregister"_ from the once being watched Model,
+  /// it can set watched mask to 0 (smNone) to not be bothered anymore. If it
+  /// does not watch anymore, it will never rebuild again, unless enforced
+  /// externally eg. from an InheritedWidget changes (or route going out of
+  /// scope).
+  ///
   void watches<M extends UiModel>(M m, int smMask) =>
       _state.value.bindNotifier(m.tg.notifier as UiNotifier, smMask);
 }
