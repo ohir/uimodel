@@ -41,6 +41,9 @@ mixin UiModel {
   /// You should give it an UiNotifier after. (Or eg. a CiteNotifier for CI tests).
   late final tg = Toggler();
 
+  // ignore till https://github.com/flutter/flutter/issues/31856 resolves
+  // this is for sure covered by 'inners :: model forwarders' test
+  // coverage:ignore-start
   /// returns state of _bool_ flag (item, bit) at _tgIndex_. 1:true 0:false
   bool operator [](int tgIndex) => tg[tgIndex];
 
@@ -57,6 +60,7 @@ mixin UiModel {
   /// the UI code.  If you must have it faster, use _tg_ directly, eg.
   /// `m.tg.active(tgIndex)`, `m.tg.enable(tgIndex)`, `m.tg.disable(tgIndex)`.
   TgIndexed<bool> get E => tg.E;
+  // coverage:ignore-end
 }
 
 /// helper class to make item (flag, bit) related resources be avaliable
@@ -72,7 +76,7 @@ class TgIndexed<T> {
 
 /// add E getter to Toggler then expose it in [UiModel] for Views use
 extension TogglerEindexed on Toggler {
-  TgIndexed<bool> get E => TgIndexed((i) => active(i), (i, v) => setDS(i, v));
+  TgIndexed<bool> get E => TgIndexed((i) => active(i), (i, v) => setDS(i, !v));
 }
 
 /// UiNotifier for Flutter Elements
@@ -82,17 +86,7 @@ extension TogglerEindexed on Toggler {
 class UiNotifier extends ToggledNotifier {
   final _wama = <int, List<Element>>{}; // watched mask -> observers list
 
-  /// severe ties with Flutter UI, ie. remove all registered `watches`. Rarely
-  /// used in _release_ code, mostly to clean-up after an exception. Exposed to
-  /// allow switching notifiers in test scenarios.
-  ///
-  /// Note: after disposing UiNotifier your persistent UI elements that were
-  /// bond to disposed (this) instance will no longer be able to bind to another.
-  /// So, if you dispose UiNotifier for whatever reason, you should then rebuild
-  /// active Widgets tree (page, route) from the top to make all your "Stateless
-  /// with UiModelLink" wigets anew and have them bind to the new UiNotifier
-  /// instance.
-  void dispose() => _wama.clear();
+  // void dispose() => _wama.clear(); // usable only when all app is crashing anyway
 
   /// notify observers about changes
   @override

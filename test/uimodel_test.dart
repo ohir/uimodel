@@ -3,6 +3,32 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:uimodel/uimodel.dart';
 
+/// inherited bool
+class OneOrAnother extends InheritedWidget {
+  final bool value;
+  const OneOrAnother({super.key, required this.value, required super.child});
+  static OneOrAnother of(BuildContext context) {
+    final OneOrAnother? result =
+        context.dependOnInheritedWidgetOfExactType<OneOrAnother>();
+    return result!;
+  }
+
+  @override
+  bool updateShouldNotify(OneOrAnother old) => value != old.value;
+}
+
+class DoubleW extends UiModeledWidget {
+  final TestModel m;
+  final Widget w1;
+  final Widget w2;
+  DoubleW({super.key, required this.m, required this.w1, required this.w2});
+
+  @override
+  Widget build(BuildContext context) {
+    return m[5] ? w1 : w2;
+  }
+}
+
 /// reflected state PDO
 class BuiltState {
   int bc = 0;
@@ -37,13 +63,13 @@ class BuildsWatcher extends StatelessWidget with UiModelLink {
   }
 }
 
-class RegTwice extends StatelessWidget with UiModelLink {
+class RegTwice extends UiModeledWidget {
   final TestModel m;
   RegTwice({super.key, required this.m});
   @override
   Widget build(BuildContext context) {
-    watches(m, 1);
-    watches(m, 1); // should throw
+    watches(m, 33);
+    watches(m, 65);
     return const SizedBox.shrink();
   }
 }
@@ -73,7 +99,7 @@ class TestModel with UiModel {
 }
 
 void main() {
-  group('simple', () {
+  group('simple ::', () {
     late TestModel m;
     late BuildsWatcher wtop;
     setUp(() {
@@ -87,10 +113,15 @@ void main() {
               pos: 1,
               smMask: 2,
               child: BuildsWatcher(
-                m: m,
-                pos: 2,
-                smMask: 4,
-              )));
+                  m: m,
+                  pos: 2,
+                  smMask: 4,
+                  child: BuildsWatcher(
+                    m: m,
+                    pos: 3,
+                    smMask: 4, // two elements for same mask
+                    child: RegTwice(m: m), // two masks for same element
+                  ))));
     });
     testWidgets('Build at place', (wt) async {
       await wt.pumpWidget(wtop);
@@ -139,39 +170,47 @@ void main() {
       expect(m.bs[2].bc, equals(0));
     });
   });
-  group('inners', () {
+  group('inners ::', () {
     late TestModel m;
     late BuildsWatcher wtop;
     setUp(() {
       m = TestModel();
       wtop = BuildsWatcher(m: m, pos: 0, smMask: 1);
     });
-    testWidgets('forwarders', (wt) async {
+    test('model forwarders', () {
+      // make sure coverage-ignored frorwarders work
+      // https://github.com/flutter/flutter/issues/31856
+      dynamic spare;
+      spare = m[11];
+      expect(spare, isA<bool>());
+      spare = m.E[11];
+      expect(spare, isA<bool>());
+      m[11] = true;
+      expect(m[11], isTrue);
+      expect(m.tg.bits & 1 << 11 != 0, isTrue);
+      m[11] = false;
+      expect(m[11], isFalse);
+      expect(m.tg.bits & 1 << 11 != 0, isFalse);
+      m.E[11] = false; // disable ds ->1
+      expect(m.E[11], isFalse);
+      expect(m.tg.ds & 1 << 11 != 0, isTrue);
+      m.E[11] = true; // enable ds ->0
+      expect(m.E[11], isTrue);
+      expect(m.tg.ds & 1 << 11 != 0, isFalse);
+      m.tg.bits = 0;
+      m.toggle(11);
+      expect(m[11], isTrue);
+      expect(m.tg.bits, equals(1 << 11));
+      m.toggle(11);
+      expect(m[11], isFalse);
+      expect(m.tg.bits, equals(0));
+    });
+    testWidgets('observers', (wt) async {
       await wt.pumpWidget(wtop);
       expect(m.bs[0].bc, equals(1)); // initial build should be counted
-      m[1] = m[0] ? true : true;
       int o = (m.tg.notifier as UiNotifier).observers;
       expect(o, equals(1));
-      expect(m[0], isFalse);
-      expect(m[1], isTrue);
-      await wt.pump();
-      expect(m.bs[0].bc, equals(1)); // [0] should not change
-      // (m.tg.notifier as UiNotifier).dispose();
-      // o = (m.tg.notifier as UiNotifier).observers;
     });
-    /* IDNKy how to test for bad unregistrations exceptions
-      testWidgets('bad unregister', (wt) async {
-        await wt.pumpWidget(wtop);
-        expect(m.bs[0].bc, equals(1)); // initial build should be counted
-        int o = (m.tg.notifier as UiNotifier).observers;
-        expect(o, equals(1));
-        (m.tg.notifier as UiNotifier).dispose();
-        o = (m.tg.notifier as UiNotifier).observers;
-        expect(o, equals(0));
-        wt.pump();
-        expect(wt.binding.takeException(), isA<AssertionError>);
-        wt.binding.takeException();
-      });*/
 
     testWidgets('not watched', (wt) async {
       await wt.pumpWidget(wtop);
@@ -199,6 +238,26 @@ void main() {
       //expect(m.bs[0].bc, equals(2)); // no changes
       //m.tap[tgLastFlag];
       //expect(m.bs[0].bc, equals(3)); // should observe LastFlag now
+    });
+  });
+  group('tree tricks ::', () {
+    late TestModel m;
+    late Widget wtop;
+    setUp(() {
+      m = TestModel();
+      wtop = DoubleW(
+        m: m,
+        w1: const SizedBox.shrink(key: Key('same')),
+        w2: const SizedBox.expand(key: Key('same')),
+      );
+    });
+
+    testWidgets('conditional watch', (wt) async {
+      await wt.pumpWidget(wtop);
+      await wt.pump();
+      m[5] = true;
+      await wt.pump();
+      expect(m[5], isTrue);
     });
   });
   // group('newgroup', () { setUp(() {}); });
