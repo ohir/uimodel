@@ -74,7 +74,7 @@ class TgIndexed<T> {
   void operator []=(int i, T v) => sv(i, v);
 }
 
-/// add E getter to Toggler then expose it in [UiModel] for Views use
+/// add E getter to Toggler (just to expose it in [UiModel] for View code use)
 extension TogglerEindexed on Toggler {
   TgIndexed<bool> get E => TgIndexed((i) => active(i), (i, v) => setDS(i, !v));
 }
@@ -149,15 +149,6 @@ class _MixinState {
 
   void init(Element element) => _element = element;
 
-/* From the UI design it would be nice to have ability to bind widget to many
-   (sub)models. Or change bindings on a next rebuild. This would be positive
-   for stronger decoupling View and Model (ie. designer being free to make a
-   screen piece from all data reachable via umbrella model, model developer
-   free to not think on presentation layer). But this might complicate code
-   and leak.
-   Other solution is to restrict user to a strict rule "single element,
-   single watches in build". We will do both experiments (as branches and see).
-*/
   void bindNotifier(UiNotifier uin, int smMask) {
     if (_more == null) {
       if (smMask == _smmask && _uin == uin) return; // rewatching

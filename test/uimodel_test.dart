@@ -3,10 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:uimodel/uimodel.dart';
 
-/// our model to tests
+/// our tests model
 class TestModel with UiModel {
   final sub1 = SubModel();
-  final sub2 = SubModel(100);
+  final sub2 = SubModel(cnt: 100);
   late final TgIndexed<void> tap;
   final _bs = <BuiltState>[
     // up to 6 our test widgets reflect back their state here
@@ -27,34 +27,7 @@ class TestModel with UiModel {
   List<BuiltState> get bs => _bs;
 }
 
-/// inherited bool
-class OneOrAnother extends InheritedWidget {
-  final bool value;
-  const OneOrAnother({super.key, required this.value, required super.child});
-  static OneOrAnother of(BuildContext context) {
-    final OneOrAnother? result =
-        context.dependOnInheritedWidgetOfExactType<OneOrAnother>();
-    return result!;
-  }
-
-  @override
-  bool updateShouldNotify(OneOrAnother old) => value != old.value;
-}
-
-/// trying to get to update
-class DoubleW extends UiModeledWidget {
-  final TestModel m;
-  final Widget w1;
-  final Widget w2;
-  DoubleW({super.key, required this.m, required this.w1, required this.w2});
-
-  @override
-  Widget build(BuildContext context) {
-    return m[5] ? w1 : w2;
-  }
-}
-
-/// reflected state PDO
+/// reflected state POD
 class BuiltState {
   int bc = 0;
   int taps = 0;
@@ -62,8 +35,12 @@ class BuiltState {
   bool wasEnabled = false;
 }
 
+/// show bit/mask naming
+const tgLastFlag = 5;
+const smLastFlag = 1 << tgLastFlag;
+
 /// This widget should rebuild on changes set as smMask. It counts its rebuilds
-/// and reflects state back to TestModel `bs` property.
+/// and reflects Widget state back to TestModel `bs` property.
 class BuildsWatcher extends StatelessWidget with UiModelLink {
   final int pos;
   final int smMask;
@@ -78,7 +55,7 @@ class BuildsWatcher extends StatelessWidget with UiModelLink {
   }) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    // watch also tgLastFlag if disabled, testing dynamic masks (not advised to use)
+    // watch also tgLastFlag if disabled, Testing masks change on rebuild.
     m.E[pos] ? watches(m, smMask) : watches(m, smMask | 1 << tgLastFlag);
     watches(m.sub1, 1); // watch also two submodels
     watches(m.sub2, 1);
@@ -90,23 +67,23 @@ class BuildsWatcher extends StatelessWidget with UiModelLink {
   }
 }
 
+/// class to test notifier inventory update
 class RegTwice extends UiModeledWidget {
   final TestModel m;
   RegTwice({super.key, required this.m});
   @override
   Widget build(BuildContext context) {
     watches(m, 33);
-    watches(m, 65);
+    watches(m, 65); // only last mask counts for a with-UiModel instance
     return const SizedBox.shrink();
   }
 }
 
-const tgLastFlag = 5;
-const smLastFlag = 1 << 5;
-
+/// UiModel based models can be nested at will, show it in tests
 class SubModel with UiModel {
   int cnt;
-  SubModel([this.cnt = 0]) {
+  int tag;
+  SubModel({this.cnt = 0, this.tag = 0}) {
     tg.notifier = UiNotifier();
   }
   void up() {
@@ -115,6 +92,32 @@ class SubModel with UiModel {
   }
 }
 
+/// class to test configuration (Widget) update
+class Either extends UiModeledWidget {
+  final SubModel m;
+
+  Either({super.key, required this.m});
+
+  @override
+  Widget build(BuildContext context) {
+    watches(m, 1);
+    return m[0] ? SubLeaf(m: m, tag: 111) : SubLeaf(m: m, tag: 222);
+  }
+}
+
+/// class to test configuration (Widget) update
+class SubLeaf extends UiModeledWidget {
+  final SubModel m;
+
+  SubLeaf({super.key, required this.m, int tag = 0}) {
+    m.tag = tag;
+  }
+
+  @override
+  Widget build(BuildContext context) => Container();
+}
+
+/// TESTS
 void main() {
   group('simple ::', () {
     late TestModel m;
@@ -261,26 +264,6 @@ void main() {
       //expect(m.bs[0].bc, equals(3)); // should observe LastFlag now
     });
   });
-  group('tree tricks ::', () {
-    late TestModel m;
-    late Widget wtop;
-    setUp(() {
-      m = TestModel();
-      wtop = DoubleW(
-        m: m,
-        w1: const SizedBox.shrink(key: Key('same')),
-        w2: const SizedBox.expand(key: Key('same')),
-      );
-    });
-
-    testWidgets('conditional watch', (wt) async {
-      await wt.pumpWidget(wtop);
-      await wt.pump();
-      m[5] = true;
-      await wt.pump();
-      expect(m[5], isTrue);
-    });
-  });
   group('multi ::', () {
     late TestModel m;
     late Widget wtop;
@@ -311,6 +294,20 @@ void main() {
       await wt.pump();
       expect(m.bs[2].bc, equals(3)); // wtop watches sub2
       expect(m.sub2.cnt, equals(101));
+    });
+  });
+  group('update', () {
+    late SubModel m;
+    setUp(() {
+      m = SubModel();
+    });
+    testWidgets('state pass', (wt) async {
+      await wt.pumpWidget(Either(m: m));
+      await wt.pump();
+      expect(m.tag, equals(222));
+      m.toggle(0);
+      await wt.pump();
+      expect(m.tag, equals(111));
     });
   });
   // group('newgroup', () { setUp(() {}); });
