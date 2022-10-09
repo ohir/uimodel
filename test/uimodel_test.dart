@@ -1,10 +1,9 @@
-import 'package:flutter/material.dart';
-// import 'package:flutter/widgets.dart'; We want theme
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:uimodel/uimodel.dart';
 
-/// our model to tests
+/// our tests model
 class TestModel with UiModel {
   final sub1 = SubModel();
   final sub2 = SubModel(cnt: 100);
@@ -28,7 +27,7 @@ class TestModel with UiModel {
   List<BuiltState> get bs => _bs;
 }
 
-/// reflected state PDO
+/// reflected state POD
 class BuiltState {
   int bc = 0;
   int taps = 0;
@@ -36,8 +35,12 @@ class BuiltState {
   bool wasEnabled = false;
 }
 
+/// show bit/mask naming
+const tgLastFlag = 5;
+const smLastFlag = 1 << tgLastFlag;
+
 /// This widget should rebuild on changes set as smMask. It counts its rebuilds
-/// and reflects state back to TestModel `bs` property.
+/// and reflects Widget state back to TestModel `bs` property.
 class BuildsWatcher extends StatelessWidget with UiModelLink {
   final int pos;
   final int smMask;
@@ -52,7 +55,7 @@ class BuildsWatcher extends StatelessWidget with UiModelLink {
   }) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    // watch also tgLastFlag if disabled, testing dynamic masks (not advised to use)
+    // watch also tgLastFlag if disabled, Testing masks change on rebuild.
     m.E[pos] ? watches(m, smMask) : watches(m, smMask | 1 << tgLastFlag);
     watches(m.sub1, 1); // watch also two submodels
     watches(m.sub2, 1);
@@ -64,20 +67,19 @@ class BuildsWatcher extends StatelessWidget with UiModelLink {
   }
 }
 
+/// class to test notifier inventory update
 class RegTwice extends UiModeledWidget {
   final TestModel m;
   RegTwice({super.key, required this.m});
   @override
   Widget build(BuildContext context) {
     watches(m, 33);
-    watches(m, 65);
+    watches(m, 65); // only last mask counts for a with-UiModel instance
     return const SizedBox.shrink();
   }
 }
 
-const tgLastFlag = 5;
-const smLastFlag = 1 << 5;
-
+/// UiModel based models can be nested at will, show it in tests
 class SubModel with UiModel {
   int cnt;
   int tag;
@@ -90,6 +92,32 @@ class SubModel with UiModel {
   }
 }
 
+/// class to test configuration (Widget) update
+class Either extends UiModeledWidget {
+  final SubModel m;
+
+  Either({super.key, required this.m});
+
+  @override
+  Widget build(BuildContext context) {
+    watches(m, 1);
+    return m[0] ? SubLeaf(m: m, tag: 111) : SubLeaf(m: m, tag: 222);
+  }
+}
+
+/// class to test configuration (Widget) update
+class SubLeaf extends UiModeledWidget {
+  final SubModel m;
+
+  SubLeaf({super.key, required this.m, int tag = 0}) {
+    m.tag = tag;
+  }
+
+  @override
+  Widget build(BuildContext context) => Container();
+}
+
+/// TESTS
 void main() {
   group('simple ::', () {
     late TestModel m;
@@ -283,27 +311,4 @@ void main() {
     });
   });
   // group('newgroup', () { setUp(() {}); });
-}
-
-class Either extends UiModeledWidget {
-  final SubModel m;
-
-  Either({super.key, required this.m});
-
-  @override
-  Widget build(BuildContext context) {
-    watches(m, 1);
-    return m[0] ? SubLeaf(m: m, tag: 111) : SubLeaf(m: m, tag: 222);
-  }
-}
-
-class SubLeaf extends UiModeledWidget {
-  final SubModel m;
-
-  SubLeaf({super.key, required this.m, int tag = 0}) {
-    m.tag = tag;
-  }
-
-  @override
-  Widget build(BuildContext context) => Container();
 }
