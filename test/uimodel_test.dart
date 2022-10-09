@@ -1,57 +1,13 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
+// import 'package:flutter/widgets.dart'; We want theme
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:uimodel/uimodel.dart';
 
-class SimpleModel with UiModel {
-  int taps = 0;
-  SimpleModel() {
-    tg.notifier = UiNotifier();
-  }
-  void up() {
-    taps++;
-    tg.toggle(0);
-  }
-}
-
-class SimpleWatcher extends UiModeledWidget {
-  final SimpleModel m;
-  final int tag;
-  SimpleWatcher({super.key, required this.m, this.tag = 0});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container();
-  }
-}
-
-class Stw extends StatefulWidget {
-  Stw({super.key});
-  final SimpleModel m = SimpleModel();
-
-  @override
-  State<Stw> createState() => StwState();
-}
-
-class StwState extends State<Stw> {
-  int builds = 0;
-  @override
-  Widget build(BuildContext context) {
-    builds++;
-    final m = widget.m;
-    //return m[0] ? SimpleWatcher(m: m, tag: 1) : SimpleWatcher(m: m, tag: 2);
-    return m.taps & 1 == 0
-        ? SimpleWatcher(m: m, tag: 1)
-        : SimpleWatcher(m: m, tag: 2);
-  }
-
-  void tap0() => setState(() => widget.m.up());
-}
-
 /// our model to tests
 class TestModel with UiModel {
   final sub1 = SubModel();
-  final sub2 = SubModel(100);
+  final sub2 = SubModel(cnt: 100);
   late final TgIndexed<void> tap;
   final _bs = <BuiltState>[
     // up to 6 our test widgets reflect back their state here
@@ -70,33 +26,6 @@ class TestModel with UiModel {
     tg.notifier = UiNotifier();
   }
   List<BuiltState> get bs => _bs;
-}
-
-/// inherited bool
-class OneOrAnother extends InheritedWidget {
-  final bool value;
-  const OneOrAnother({super.key, required this.value, required super.child});
-  static OneOrAnother of(BuildContext context) {
-    final OneOrAnother? result =
-        context.dependOnInheritedWidgetOfExactType<OneOrAnother>();
-    return result!;
-  }
-
-  @override
-  bool updateShouldNotify(OneOrAnother old) => value != old.value;
-}
-
-/// trying to get to update
-class DoubleW extends UiModeledWidget {
-  final TestModel m;
-  final Widget w1;
-  final Widget w2;
-  DoubleW({super.key, required this.m, required this.w1, required this.w2});
-
-  @override
-  Widget build(BuildContext context) {
-    return m[5] ? w1 : w2;
-  }
 }
 
 /// reflected state PDO
@@ -151,7 +80,8 @@ const smLastFlag = 1 << 5;
 
 class SubModel with UiModel {
   int cnt;
-  SubModel([this.cnt = 0]) {
+  int tag;
+  SubModel({this.cnt = 0, this.tag = 0}) {
     tg.notifier = UiNotifier();
   }
   void up() {
@@ -306,42 +236,6 @@ void main() {
       //expect(m.bs[0].bc, equals(3)); // should observe LastFlag now
     });
   });
-  group('tree tricks ::', () {
-    late TestModel m;
-    late Widget wtop;
-    setUp(() {
-      m = TestModel();
-      wtop = DoubleW(
-        m: m,
-        w1: const SizedBox.shrink(key: Key('same')),
-        w2: const SizedBox.expand(key: Key('same')),
-      );
-    });
-
-    testWidgets('conditional watch', (wt) async {
-      await wt.pumpWidget(wtop);
-      await wt.pump();
-      m[5] = true;
-      await wt.pump();
-      expect(m[5], isTrue);
-    });
-  });
-  group('update ::', () {
-    setUp(() {
-      // m = SimpleModel();
-    });
-    testWidgets('Immerse', (wt) async {
-      final xx = Stw(key: const Key('stw'));
-      await wt.pumpWidget(xx);
-      expect(xx.m.taps, equals(0));
-      xx.m.up();
-      await wt.pump();
-      expect(xx.m.taps, equals(1));
-      xx.m.up();
-      await wt.pump();
-      expect(xx.m.taps, equals(2));
-    });
-  });
   group('multi ::', () {
     late TestModel m;
     late Widget wtop;
@@ -374,5 +268,42 @@ void main() {
       expect(m.sub2.cnt, equals(101));
     });
   });
+  group('update', () {
+    late SubModel m;
+    setUp(() {
+      m = SubModel();
+    });
+    testWidgets('state pass', (wt) async {
+      await wt.pumpWidget(Either(m: m));
+      await wt.pump();
+      expect(m.tag, equals(222));
+      m.toggle(0);
+      await wt.pump();
+      expect(m.tag, equals(111));
+    });
+  });
   // group('newgroup', () { setUp(() {}); });
+}
+
+class Either extends UiModeledWidget {
+  final SubModel m;
+
+  Either({super.key, required this.m});
+
+  @override
+  Widget build(BuildContext context) {
+    watches(m, 1);
+    return m[0] ? SubLeaf(m: m, tag: 111) : SubLeaf(m: m, tag: 222);
+  }
+}
+
+class SubLeaf extends UiModeledWidget {
+  final SubModel m;
+
+  SubLeaf({super.key, required this.m, int tag = 0}) {
+    m.tag = tag;
+  }
+
+  @override
+  Widget build(BuildContext context) => Container();
 }

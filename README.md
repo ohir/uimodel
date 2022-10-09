@@ -4,6 +4,8 @@
 
 Package `uimodel` helps to build comprehensible Models and ViewModels for Flutter apps, then have it linked with UI View layer in a single line per your custom Widget.
 
+Tests coverage: **100.0%** (77 of 77 lines)
+
 [UiModel] mixin is a thin wrapper around [Toggler](https://github.com/ohir/toggler), an (observable) state machine register that runs underhood your Models. It exposes a subset of Toggler api useful in Widget `build` method.
 
 [UiModelLink] mixin adds the magic _watches(model, changes-mask)_ link layer to the Widget.
